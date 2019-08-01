@@ -19,11 +19,17 @@ func main() {
 ## My development environment
 These days, virtually all the code I write runs in a cloud. It's been a few years since I've written code that runs on a system I can touch, and even longer since I wrote code intended to run on the machine I code with.
 
-Given this and the fact that I have near-perfect Internet connectivity almost everywhere, I no longer build code on my own systems. A big benefit of this is that I don't have to keep updating tools on my development system - and that's just fine with me. I've tried several options, but the platform I currently use to develop code now is Google Cloud.
+Given this and the fact that I have near-perfect Internet connectivity almost everywhere, I no longer write code on my own systems. A big benefit of this is that I don't have to keep updating tools on my development system - and that's just fine with me. I've tried several options, but the platform I currently use to develop code is Google Cloud.
 
-Specifically, I spin up Google Cloud Shell instances, which gives me an on-demand Linux VM I can access from within a web browser i.e. from just about any device. That Linux VM is pretty small, but it contains current versions of all the tools I want and Google maintains it for me. Oh, and it's completely free.
+Specifically, I spin up a Google Cloud Shell instance, which gives me an on-demand Linux VM I can access from within a web browser i.e. from just about any device, including laptops, iPads and even a phone if I get caught out. That Linux VM is pretty small, but it contains current versions of all the tools I want and Google maintains it for me. Google will terminate the Linux VM if I leave it idle for too long, but will recreate it when I try to access it again AND all my files will be where I left them. I can have multiple terminal sessions running on that Linux VM; I generally use tmux to have a window-like system with multiple terminal sessions open in a single web browser tab.
 
-## Make sure the code works
+If I want to use something like Visual Studio, Intellij, VS Code or Eclipse, I can mount the Cloud Shell file system to my local device via `sshfs` and edit code on my local computer rather than via the shell. For Golang, I typically use either VS Code running on my laptop for coding sessions, and occasionally use `vi` on the Cloud Shell instance for quick fixes or when I don't have my laptop available.
+
+Oh, and that Google Cloud Shell is completely free for as long as I like.
+
+I also use Azure Pipelines or Google Cloud Build to give me a CI capability that requires minimal ongoing effort on my part. When I check code into a repo, either of those tools will jump in and test it to ensure I haven't broken anything with the latest changes. That gets me away from having to execute tests locally.
+
+## Make sure the code actually works
 
 We can run this helloworld code quickly to see that does what we expect
 ```
@@ -41,6 +47,8 @@ $ ./helloworld
 hello world
 $
 ```
+
+All good to go.
 
 ## Check the file size of the Golang executable
 
@@ -67,6 +75,7 @@ WORKDIR /
 COPY helloworld.go .
 RUN go build helloworld.go
 CMD ["./helloworld"]
+$
 ```
 
 Does it work?
@@ -94,11 +103,13 @@ There's a standard Golang container, so presumably that's what we should be usin
 First the Dockerfile
 
 ```
+$ cat Dockerfile
 FROM golang:latest
 WORKDIR /
 COPY helloworld.go .
 RUN go build helloworld.go
 CMD ["./helloworld"]
+$
 ```
 
 Now let's build it
@@ -189,7 +200,7 @@ multistage-alpine   latest              64f614b0c4fd        2 minutes ago       
 $
 ```
 
-Now we're kicking goals! We've gone from a 352Mb image file when we were building and running the executable within the one Alpine container, down to 7.58Mb.
+Now we're kicking goals! We've gone from a 352Mb image file when we were building and running the executable within the one Alpine container, down to 7.58Mb. I can deploy a whole lot of 7.58Mb images on a typical VM/Kubernetes node.
 
 Now we've established this approach is giving a much smaller image size, what's with this Dockerfile?
 
