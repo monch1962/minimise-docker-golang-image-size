@@ -41,6 +41,55 @@ total 1956
 $
 ```
 
-As you can see, the helloworld executable is slightly under 2Mb in size. If you're going to run this file inside a Docker container, that container with the executable file can't be any smaller than 2Mb (the size of this file). Let's see what happens when we put that file into a container
+As you can see, the helloworld executable is slightly under 2Mb in size. If you're going to run this file inside a Docker container, that container with the executable file can't be any smaller than 2Mb (i.e. the size of this file). Let's see what happens when we put that file into a container
 
 ## Debian container
+
+Now let's create a container image based on Debian
+
+```
+$ cd debian
+$ docker build . -t debian
+$
+```
+
+## golang-latest container
+
+There's a standard Golang container, so presumably that's what we should be using for Golang code. Let's build a Dockerfile based on that to run our helloworld app
+
+First the Dockerfile
+
+```
+FROM golang:latest
+WORKDIR /
+COPY helloworld.go .
+RUN go build helloworld.go
+CMD ["./helloworld"]
+```
+
+Now let's build it
+```
+$ docker build . -t golang-latest
+$
+```
+
+Does it work OK?
+```
+$ docker run golang-latest
+hello world
+$
+```
+
+Yes it does. We're looking good...
+
+Now, let's look how big that image is
+```
+$ docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+golang-latest       latest              7476c4302e9a        6 seconds ago       816MB
+```
+
+Hmm... Our 2Mb executable, wrapped in a container image, turns into 816Mb in size. What the...?
+
+Can we do any better?
+
