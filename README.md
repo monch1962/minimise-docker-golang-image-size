@@ -394,9 +394,9 @@ Note that including the root certificates into the container has increased the i
 
 ## Conclusion
 
-It's possible to get Docker images running Golang code to be very small - close to the size of the executable itself. It's quite common to have non-trivial Golang applications running in Docker images under 20Mb in size.
+It's possible to get Docker images running Golang code to be very small - close to the size of the executable itself. A trivial Go application compiles to about a 2Mb executable. It's quite common to have useful Golang executables around 10-20Mb in size, and following the steps above should give you Docker images of a similar size.
 
-Contrast this with Java code, where the Docker image will need to contain either a JVM or JRE plus the OS itself - a Java helloworld app will typically be somewhere over 200Mb in size even after shaking out the dependency tree.
+Contrast this with Java code, where the Docker image will need to contain either a JVM or JRE plus the OS itself. A similar article on minimising the size of Java images is at https://qiita.com/h-r-k-matsumoto/items/1725fc587ce127671560; using Java 11 and jlink, they were able to shrink the size of a trivial Java app running in a Docker container from 1Gb+ down to an 85Mb image. Impressive, but still an order of magnitude larger than the size of a trivial Golang application.
 
 Python code will need to include the Python interpreter - typically this is around 70-120Mb in size - plus any libraries required by the application.
 
