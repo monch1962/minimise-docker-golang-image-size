@@ -285,6 +285,15 @@ $ ./google-page-size
 $
 ```
 
+Note that the executable file size is now 6.9Mb. That's the new best-case size for a Docker image to run this code.
+```
+$ ls -l google*
+total 6992
+-rwxr-xr-x 1 monch1962 monch1962 6913929 Aug  2 00:32 google-page-size
+-rw-r--r-- 1 monch1962 monch1962     337 Aug  1 23:52 google-page-size.go
+$
+```
+
 Now let's build it using the same multistate/scratch approach as before. The Dockerfile is unchanged
 
 ```
@@ -311,6 +320,7 @@ $ docker run multistage-scratch-gps
 standard_init_linux.go:211: exec user process caused "no such file or directory"
 $
 ```
+Our image size is once again pretty much the same size as the executable file within it, but it now fails when we try to run it.
 
 What happened?
 
@@ -342,6 +352,8 @@ $ docker run multistage-scratch-gps
 Get https://google.com: x509: certificate signed by unknown authority
 $
 ```
+
+Note that the container size has _shrunk_ slightly after we've compiled in those libraries. Not sure why it's gotten smaller rather than larger, but it works and that's all I care about.
 
 We've gotten past the previous problem, but now we've hit another one. What's going on here?
 
@@ -379,3 +391,13 @@ $
 All good.
 
 Note that including the root certificates into the container has increased the image size from 6.87Mb to 7.1Mb. That's quite a reasonable change, and still lets us run a load of these images on each Docker host or Kubernetes node.
+
+## Conclusion
+
+It's possible to get Docker images running Golang code to be very small - close to the size of the executable itself. It's quite common to have non-trivial Golang applications running in Docker images under 20Mb in size.
+
+Contrast this with Java code, where the Docker image will need to contain either a JVM or JRE plus the OS itself - a Java helloworld app will typically be somewhere over 200Mb in size even after shaking out the dependency tree.
+
+Python code will need to include the Python interpreter - typically this is around 70-120Mb in size - plus any libraries required by the application.
+
+Node.js code will need to include the Node runtime, plus any libraries explicitly requested by the application, plus any cascading library dependencies. The image will be almost certainly over 100Mb in size.
