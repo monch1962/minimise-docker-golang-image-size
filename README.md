@@ -101,3 +101,105 @@ Can we do any better?
 
 Alpine is a distribution that's designed to let us produce small container images. It contains an absolute minimal set of functionality out of the box, so we're going to have to add the tools we want to that image in order to build our helloworld executable.
 
+## Golang-alpine container
+
+There's a version of the Alpine container that includes the pieces necessary to compile and execute Golang applications. Let's build a Dockerfile for that and see how it goes
+```
+$ cat Dockerfile
+FROM golang:alpine
+WORKDIR /
+COPY helloworld.go .
+RUN go build helloworld.go
+CMD ["./helloworld"]
+$ docker build . -t golang-alpine
+...
+$ docker run golang-alpine
+hello world
+$ docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+golang-alpine       latest              849a6d791860        3 minutes ago       352MB
+$
+```
+
+OK, we're getting somewhere. Just getting rid of all the unnecessary stuff in a general-purpose base container and going with minimal Alpine has reduced our container size from 816Mb to 352Mb. That's a big improvement, but it's still a whole lot bigger than our 2Mb executable file
+
+What else can we try?
+
+## Multi-stage build
+
+There's a workflow we can use to separate out the build of the Golang executable from having a container able to run it. Let's look at how that would work
+```
+$ cat Dockerfile
+# build stage
+FROM golang:alpine as builder
+RUN mkdir /build
+ADD . /build/
+WORKDIR /build
+RUN go build -o main .
+
+# final stage
+FROM alpine
+RUN adduser -S -D -H -h /app appuser
+USER appuser
+COPY --from=builder /build/main /app/
+WORKDIR /app
+CMD ["./main"]
+$ docker build . -t multistage-alpine
+...
+$ docker run multistage-alpine
+helloworld
+$
+```
+
+Now that Dockerfile looks quite a bit different to what we've used before, but it seems to have given us a working image. Before we go into the contents of the Dockerfile, let's see how big that image is
+```
+$ docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+multistage-alpine   latest              64f614b0c4fd        2 minutes ago       7.58MB
+$
+```
+
+Now we're kicking goals! We've gone from a 352Mb image file when we were building and running the executable within the one Alpine container, down to 7.58Mb.
+
+Now we've established this approach is giving a much smaller image size, what's with this Dockerfile?
+
+Note that there's 2 distinct sections in the Dockerfile: `build stage` and `final stage`. Our helloworld app is compiled in the build stage, then we spin up a _different_ Alpine image, copy the compiled helloworld from build state into that 'empty' Alpine image and run it.
+
+That second Alpine image is just basic Alpine, plus our executable - no Go compiler, and virtually nothing else
+
+So... can we do even better? Just how small can our Docker image get?
+
+## Multi-stage scratch build
+
+SCRATCH is a base container image that contains ... nothing. Not a file, not even an operating system. Huh?
+
+```
+$ cat Dockerfile
+# build stage
+FROM golang:alpine as builder
+RUN mkdir /build
+ADD . /build/
+WORKDIR /build
+RUN go build -o main .
+$ docker build . -t multistage-scratch
+...
+$ docker run multistage-scratch
+hello world
+$ docker images
+REPOSITORY           TAG                 IMAGE ID            CREATED             SIZE
+multistage-scratch   latest              cee55e91289d        20 seconds ago      2MB
+```
+
+Now we've shrunk our image even further. It's essentially the same size as the helloworld executable, so we're probably not going to get it any smaller than that.
+
+Awesome. We've got a working helloworld container that's pretty much the same size as the helloworld executable.
+
+But...
+
+# final stage
+FROM scratch
+COPY --from=builder /build/main /app/
+WORKDIR /app
+CMD ["./main"]
+```
+
