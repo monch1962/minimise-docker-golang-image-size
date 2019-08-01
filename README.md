@@ -240,5 +240,142 @@ Now we've shrunk our image even further. It's essentially the same size as the h
 
 Awesome. We've got a working helloworld container that's pretty much the same size as the helloworld executable. I can live with this.
 
-But this approach has its limitations...
+But this approach has its gotchas...
 
+## A (slightly) more useful application
+
+Let's look at some code that does a bit more than print helloworld.
+
+```
+$ cat google-page-size.go
+package main
+
+import (
+    "fmt"
+    "io/ioutil"
+    "net/http"
+    "os"
+)
+
+func main() {
+    resp, err := http.Get("https://google.com")
+    check(err)
+    body, err := ioutil.ReadAll(resp.Body)
+    check(err)
+    fmt.Println(len(body))
+}
+
+func check(err error) {
+    if err != nil {
+        fmt.Println(err)
+        os.Exit(1)
+    }
+}
+$
+```
+
+This code will download Google's home page, and print the number of bytes in the body of that page
+
+```
+$ go run google-page-size.go
+11452
+$ go build google-page-size.go
+$ ./google-page-size
+11452
+$
+```
+
+Now let's build it using the same multistate/scratch approach as before. The Dockerfile is unchanged
+
+```
+$ cat Dockerfile
+more Dockerfile
+# build stage
+FROM golang:alpine as builder
+RUN mkdir /build
+ADD . /build/
+WORKDIR /build
+RUN go build -o main .
+
+# final stage
+FROM scratch
+COPY --from=builder /build/main /app/
+WORKDIR /app
+CMD ["./main"]
+$ docker build . -t multistage-scratch-gps
+...
+$ docker images | grep multistage-scratch-gps
+REPOSITORY               TAG                 IMAGE ID            CREATED             SIZE
+multistage-scratch-gps   latest              08045d01587a        3 minutes ago       6.93MB
+$ docker run multistage-scratch-gps
+standard_init_linux.go:211: exec user process caused "no such file or directory"
+$
+```
+
+What happened?
+
+The problem is that this Golang app is a bit more complex, and is expecting to use some OS libraries when it executes. As the SCRATCH base image doesn't include an OS, those OS libraries aren't inside the image we've created, so we get an error.
+
+The workaround for this is to compile any necessary libraries into the Go executable. We do this by changing the parameters in the `go build` step
+
+```
+$ cat Dockerfile
+# build stage
+FROM golang:alpine as builder
+RUN mkdir /build
+ADD . /build/
+WORKDIR /build
+# RUN go build -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+# final stage
+FROM scratch
+COPY --from=builder /build/main /app/
+WORKDIR /app
+CMD ["./main"]
+$ docker build . -t multistage-scratch-gps
+...
+$ docker images | grep multistage-scratch-gps
+REPOSITORY               TAG                 IMAGE ID            CREATED             SIZE
+multistage-scratch-gps   latest              3ba6548d7c9f        9 seconds ago       6.87MB
+$ docker run multistage-scratch-gps
+Get https://google.com: x509: certificate signed by unknown authority
+$
+```
+
+We've gotten past the previous problem, but now we've hit another one. What's going on here?
+
+The code we're running is doing an https request. The site we're hitting (https://google.com) is legitimate, and the TLS certificate it's returning is signed by a valid authority. Unfortunately, the container running our code has no root certificates installed, so it can't validate the certificate being returned by https://google.com as coming from a legitimate source. It therefore exits with an error.
+
+We need to get the root certificates into the container for this code to work. In my Google Cloud Shell instance, the relevant file is `/etc/ssl/certs/ca-certificates.crt`, so I'll copy that file into my current directory where the `docker build` can load them into the image to be run.
+
+```
+$ cp /etc/ssl/certs/ca-certificates.crt .
+$ cat Dockerfile
+# build stage
+FROM golang:alpine as builder
+RUN mkdir /build
+ADD . /build/
+WORKDIR /build
+# RUN go build -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+# final stage
+FROM scratch
+ADD ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /build/main /app/
+WORKDIR /app
+CMD ["./main"]
+$ docker build . -t multistage-scratch-gps
+...
+$ docker images | grep multistage-scratch-gps
+REPOSITORY               TAG                 IMAGE ID            CREATED              SIZE
+multistage-scratch-gps   latest              c183bf901f10        About a minute ago   7.1MB
+$ docker run multistage-scratch-gps
+11448
+$
+```
+
+All good.
+
+Note that including the root certificates into the container has increased the image size from 6.87Mb to 7.1Mb. That's quite a reasonable change, and still lets us run a load of these images on each Docker host or Kubernetes node.
