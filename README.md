@@ -14,6 +14,10 @@ func main() {
 }
 ```
 
+Now, we want to run our code inside a Docker container, rather than as a standalone executable file. Docker images wrap around the code they're running, and those Docker images are what needs to execute. Given those Docker images consume resources when running, we want to create Docker images that are as small as possible so they consume as little resource as possible - that way we can run more concurrent instances of our helloworld on each Docker host.
+
+## What does this code do?
+
 We can run this quickly to see that does what we expect
 ```
 $ go run helloworld.go
@@ -92,4 +96,8 @@ golang-latest       latest              7476c4302e9a        6 seconds ago       
 Hmm... Our 2Mb executable, wrapped in a container image, turns into 816Mb in size. What the...?
 
 Can we do any better?
+
+## Alpine container
+
+Alpine is a distribution that's designed to let us produce small container images. It contains an absolute minimal set of functionality out of the box, so we're going to have to add the tools we want to that image in order to build our helloworld executable.
 
