@@ -396,8 +396,11 @@ Note that including the root certificates into the container has increased the i
 
 It's possible to get Docker images running Golang code to be very small - close to the size of the executable itself. A trivial Go application compiles to about a 2Mb executable. It's quite common to have useful Golang executables around 10-20Mb in size, and following the steps above should give you Docker images of a similar size.
 
+### Java
 Contrast this with Java code, where the Docker image will need to contain either a JVM or JRE plus the OS itself. A similar article on minimising the size of Java images is at https://qiita.com/h-r-k-matsumoto/items/1725fc587ce127671560; using Java 11 and jlink, they were able to shrink the size of a trivial Java app running in a Docker container from 1Gb+ down to an 85Mb image. Impressive, but still an order of magnitude larger than the size of a trivial Golang application.
 
-Python code will need to include the Python interpreter - typically this is around 70-120Mb in size - plus any libraries required by the application.
+### Python
+Python code will need to include the Python interpreter plus any libraries required by the application. A similar article on minimising the size of Java container images is at https://medium.com/bytes-mania/building-small-python-docker-images-how-to-8bb539d3e6fc where they were able to get the size of a trivial Python app running in a Docker container down to a 75Mb image.
 
-Node.js code will need to include the Node runtime, plus any libraries explicitly requested by the application, plus any cascading library dependencies. The image will be almost certainly over 100Mb in size.
+### Node.js
+Node.js code will need to include the Node runtime, plus any libraries explicitly requested by the application, plus any cascading library dependencies. A similar article on minimising the size of Node.js container images is at https://antonfisher.com/posts/2018/03/19/reducing-docker-image-size-of-a-node-js-application/ where they were able to get the size of a not-quite-so-trivial Node app running in a Docker container down to a 79Mb image.
