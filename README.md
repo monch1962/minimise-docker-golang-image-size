@@ -4,16 +4,18 @@ Steps to minimise the size of your Golang Docker images
 ## Overview
 We're going to go through the exercise of making a minimally-sized Docker image for a Go executable.
 
-Now, we want to run our code inside a Docker container, rather than as a standalone executable file. Docker images wrap around the code they're running, and those Docker images are what needs to execute. Given those Docker images consume resources when running, we want to create Docker images that are as small as possible so they consume as little resource as possible - that way we can run more concurrent instances of our helloworld on each Docker host.
+Now, we want to run this code inside a Docker container, rather than as a standalone executable file running on a server or VM. Docker images wrap around the code they're running, and those Docker images are what Docker needs to execute. Given those Docker images consume resources when we run them, we want to create Docker images that are as small as possible so they consume as little resource as possible - that way we can run more concurrent instances of our helloworld on each Docker host or Kubernetes node.
 
 Let's start with a simple `helloworld` app
 
 ```
+$ cat helloworld.go
 package main
 import "fmt"
 func main() {
     fmt.Println("hello world")
 }
+$
 ```
 
 ## My development environment
@@ -27,7 +29,7 @@ If I want to use something like Visual Studio, Intellij, VS Code or Eclipse, I c
 
 Oh, and that Google Cloud Shell is completely free for as long as I like.
 
-I also use Azure Pipelines or Google Cloud Build to give me a CI capability that requires minimal ongoing effort on my part. When I check code into a repo, either of those tools will jump in and test it to ensure I haven't broken anything with the latest changes. That gets me away from having to execute tests locally.
+I also use Azure Pipelines or Google Cloud Build to give me a CI capability that requires minimal ongoing effort on my part. When I check code into a repo, either of those tools will automatically jump in and test it to ensure I haven't broken anything with the latest changes. That gets me away from having to execute tests locally.
 
 ## Make sure the code actually works
 
@@ -94,7 +96,7 @@ $ docker images | grep debian-container
 debian-container     latest              a4c67ca2c404        28 seconds ago      776MB
 ```
 
-Ouch - our 2Mb executable has ballooned to 776Mb when we wrap it inside a Docker container
+Ouch - our 2Mb executable has ballooned to 776Mb when we wrap it inside a Docker container based on the standard Debian base image
 
 ## golang-latest container
 
@@ -138,13 +140,11 @@ Hmm... Our 2Mb executable, wrapped in a container image, turns into 816Mb in siz
 
 Can we do any better?
 
-## Alpine container
-
-Alpine is a distribution that's designed to let us produce small container images. It contains an absolute minimal set of functionality out of the box, so we're going to have to add the tools we want to that image in order to build our helloworld executable.
-
 ## Golang-alpine container
 
-There's a version of the Alpine container that includes the pieces necessary to compile and execute Golang applications. Let's build a Dockerfile for that and see how it goes
+Alpine is a Linux distribution specifically designed to let us produce small container images. It contains an absolute minimal set of functionality out of the box - no bash, no curl, no compilers, ... - so we're going to have to add any tools we need to Alpine in order to build our helloworld executable.
+
+To make our life a bit easier, there's a version of the Alpine container that includes just the packages necessary to compile and execute Golang applications. Let's build a Dockerfile for that and see how it goes
 ```
 $ cat Dockerfile
 FROM golang:alpine
