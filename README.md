@@ -392,9 +392,7 @@ All good.
 
 Note that including the root certificates into the container has increased the image size from 6.87Mb to 7.1Mb. That's quite a reasonable change, and still lets us run a load of these images on each Docker host or Kubernetes node.
 
-## Conclusion
-
-It's possible to get Docker images running Golang code to be very small - close to the size of the executable itself. A trivial Go application compiles to about a 2Mb executable. It's quite common to have useful Golang executables around 10-20Mb in size, and following the steps above should give you Docker images of a similar size.
+## Other languages
 
 ### Java
 Contrast this with Java code, where the Docker image will need to contain either a JVM or JRE plus the OS itself. A similar article on minimising the size of Java images is at https://qiita.com/h-r-k-matsumoto/items/1725fc587ce127671560; using Java 11 and jlink, they were able to shrink the size of a trivial Java app running in a Docker container from 1Gb+ down to an 85Mb image. Impressive, but still an order of magnitude larger than the size of a trivial Golang application.
@@ -404,3 +402,25 @@ Python code will need to include the Python interpreter plus any libraries requi
 
 ### Node.js
 Node.js code will need to include the Node runtime, plus any libraries explicitly requested by the application, plus any cascading library dependencies. A similar article on minimising the size of Node.js container images is at https://antonfisher.com/posts/2018/03/19/reducing-docker-image-size-of-a-node-js-application/ where they were able to get the size of a not-quite-so-trivial Node app running in a Docker container down to a 79Mb image.
+
+## Minimal base distributions
+
+### Alpine
+
+A very small image based on Alpine Linux is available from https://hub.docker.com/_/alpine. It is only 5Mb in size, is maintained by the Alpine Linux team, and can be extended for a wide range of use cases.
+
+Many projects provide base images based on Alpine Linux, which has become something of a defacto standard for deploying services with minimal image sizes. Examples of these projects include Node, Nginx, MySQL, OpenJDK, Postgres - all of which provide tiny images built on Alpine Linux, which are maintained by the respective projects.
+
+### Distroless
+
+Google maintains a set of "distroless" images at https://github.com/GoogleContainerTools/distroless. These images are language-specific, and are designed to give fairly minimal containers with just enough support to run applicatons written in those languages. These are often a good, generic choice when you don't need to create the smallest possible image size
+
+### UBI Micro
+
+Redhat maintains an image they call "UBI Micro", which can be accessed via https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#con_understanding-the-ubi-micro-images_assembly_types-of-container-images. This image is language-independent, and provide a small base image designed to suit for a wide range of use cases.
+
+Redhat provides support for this image, but it is freely distributable
+
+## Conclusion
+
+It's possible to get Docker images running Golang code to be very small - close to the size of the executable itself. A trivial Go application compiles to about a 2Mb executable. It's quite common to have useful Golang executables around 10-20Mb in size, and following the steps above should give you Docker images of a similar size.
